@@ -1,0 +1,30 @@
+---
+- name: Packer baseline configuration
+  hosts: all
+  become: true
+  tasks:
+    - name: Set timezone
+      community.general.timezone:
+        name: Asia/Jakarta
+
+    - name: Configure NTP
+      template:
+        src: chrony.conf.j2
+        dest: /etc/chrony.conf
+      notify: restart chronyd
+
+    - name: Set kernel parameters
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+      loop:
+        - { key: "vm.swappiness",           value: "10" }
+        - { key: "net.ipv4.tcp_syncookies", value: "1"  }
+        - { key: "kernel.randomize_va_space", value: "2" }
+
+  handlers:
+    - name: restart chronyd
+      service:
+        name: chronyd
+        state: restarted
